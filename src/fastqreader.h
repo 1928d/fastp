@@ -12,46 +12,54 @@
 #include "common.h"
 #include <iostream>
 #include <fstream>
+#include <string>
+
+typedef struct buf_context {
+  char* buf;
+  size_t len;
+  size_t start, end;
+  string partial;
+} fq_context;
+enum state_t {INITIAL, NEW_CHUNK, DONE};
 
 class FastqReader{
 public:
 	FastqReader(string filename, bool hasQuality = true, bool phred64=false);
 	~FastqReader();
-	bool isZipped();
 
 	void getBytes(size_t& bytesRead, size_t& bytesTotal);
-
 	//this function is not thread-safe
 	//do not call read() of a same FastqReader object from different threads concurrently
 	Read* read();
-	bool eof();
-	bool hasNoLineBreakAtEnd();
-
-public:
-	static bool isZipFastq(string filename);
-	static bool isFastq(string filename);
-	static bool test();
 
 private:
 	void init();
 	void close();
 	string getLine();
-	void clearLineBreaks(char* line);
 	void readToBuf();
+	bool eof();
+	bool hasNoLineBreakAtEnd();
+	bool isZipped();
+	static bool isZipFastq(string filename);
+	static bool isFastq(string filename);
+	static bool test();
 
 private:
 	string mFilename;
 	gzFile mZipFile;
-	FILE* mFile;
-	bool mZipped;
 	bool mHasQuality;
 	bool mPhred64;
-	char* mBuf;
-	int mBufDataLen;
-	int mBufUsedLen;
+	bool mZipped;
 	bool mStdinMode;
 	bool mHasNoLineBreakAtEnd;
 
+	FILE* mFile;
+	char* mBuf;
+	int mBufDataLen;
+	int mBufUsedLen;
+
+  state_t state = INITIAL;
+  buf_context ctx = {NULL, 0, 0, 0, string()};
 };
 
 class FastqReaderPair{
